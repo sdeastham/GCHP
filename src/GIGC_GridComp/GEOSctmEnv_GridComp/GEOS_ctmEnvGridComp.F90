@@ -51,6 +51,10 @@
       INTEGER, PARAMETER :: dp = SELECTED_REAL_KIND(14,300)
       INTEGER, PARAMETER :: qp = SELECTED_REAL_KIND(18,400)
 
+      logical, parameter :: use_fluxes=.False.
+      logical, parameter :: flip_vertical=.False.
+      logical, parameter :: run_dry=.True.
+
       real(r8), parameter :: RADIUS = MAPL_RADIUS
       real(r8), parameter :: PI     = MAPL_PI_R8
       real(r8), parameter :: D0_0   = 0.0_r8
@@ -200,6 +204,38 @@
            VLOCATION  = MAPL_VLocationCenter,             RC=STATUS  )
       _VERIFY(STATUS)
 
+      call MAPL_AddImportSpec ( gc,                                  &
+           SHORT_NAME = 'MFX_IN',                                    &
+           LONG_NAME  = 'pressure_weighted_accumulated_x_mass_flux', &
+           UNITS      = 'kg kg-1',                                   &
+           DIMS       = MAPL_DimsHorzVert,                           &
+           VLOCATION  = MAPL_VLocationCenter,           RC=STATUS  )
+      _VERIFY(STATUS)
+
+      call MAPL_AddImportSpec ( gc,                                  &
+           SHORT_NAME = 'MFY_IN',                                    &
+           LONG_NAME  = 'pressure_weighted_accumulated_y_mass_flux', &
+           UNITS      = 'kg kg-1',                                   &
+           DIMS       = MAPL_DimsHorzVert,                           &
+           VLOCATION  = MAPL_VLocationCenter,           RC=STATUS  )
+      _VERIFY(STATUS)
+
+      call MAPL_AddImportSpec ( gc,                                  &
+           SHORT_NAME = 'CX_IN',                                     &
+           LONG_NAME  = 'x_axis_accumulated_courant_number',         &
+           UNITS      = '',                                          &
+           DIMS       = MAPL_DimsHorzVert,                           &
+           VLOCATION  = MAPL_VLocationCenter,           RC=STATUS  )
+      _VERIFY(STATUS)
+
+      call MAPL_AddImportSpec ( gc,                                  &
+           SHORT_NAME = 'CY_IN',                                     &
+           LONG_NAME  = 'y_axis_accumulated_courant_number',         &
+           UNITS      = '',                                          &
+           DIMS       = MAPL_DimsHorzVert,                           &
+           VLOCATION  = MAPL_VLocationCenter,           RC=STATUS  )
+      _VERIFY(STATUS)
+
 ! Export State
       call MAPL_AddExportSpec(GC,                            &
         SHORT_NAME         = 'AIRDENS',                      &
@@ -237,7 +273,7 @@
 
       call MAPL_AddExportSpec ( gc,                                  &
            SHORT_NAME = 'MFXr8',                                     &
-           LONG_NAME  = 'pressure_weighted_accumulated_eastward_mass_flux', &
+           LONG_NAME  = 'pressure_weighted_accumulated_x_mass_flux', &
            UNITS      = 'Pa m+2 s-1',                                &
            PRECISION  = ESMF_KIND_R8,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
@@ -246,7 +282,7 @@
 
       call MAPL_AddExportSpec ( gc,                                  &
            SHORT_NAME = 'MFYr8',                                     &
-           LONG_NAME  = 'pressure_weighted_accumulated_northward_mass_flux', &
+           LONG_NAME  = 'pressure_weighted_accumulated_y_mass_flux', &
            UNITS      = 'Pa m+2 s-1',                                &
            PRECISION  = ESMF_KIND_R8,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
@@ -254,36 +290,36 @@
       _VERIFY(STATUS)
 
 !---------------------------------------------------------------------
-      call MAPL_AddExportSpec ( gc,                                  &
-           SHORT_NAME = 'CX',                                      &
-           LONG_NAME  = 'eastward_accumulated_courant_number',       &
-           UNITS      = '',                                          &
-           DIMS       = MAPL_DimsHorzVert,                           &
-           VLOCATION  = MAPL_VLocationCenter,             RC=STATUS  )
-      _VERIFY(STATUS)
-
-      call MAPL_AddExportSpec ( gc,                                  &
-           SHORT_NAME = 'CY',                                      &
-           LONG_NAME  = 'northward_accumulated_courant_number',      &
-           UNITS      = '',                                          &
-           DIMS       = MAPL_DimsHorzVert,                           &
-           VLOCATION  = MAPL_VLocationCenter,             RC=STATUS  )
-      _VERIFY(STATUS)
-      call MAPL_AddExportSpec ( gc,                                  &
-           SHORT_NAME = 'MFX',                                     &
-           LONG_NAME  = 'pressure_weighted_accumulated_eastward_mass_flux', &
-           UNITS      = 'Pa m+2 s-1',                                &
-           DIMS       = MAPL_DimsHorzVert,                           &
-           VLOCATION  = MAPL_VLocationCenter,             RC=STATUS  )
-      _VERIFY(STATUS)
-
-      call MAPL_AddExportSpec ( gc,                                  &
-           SHORT_NAME = 'MFY',                                     &
-           LONG_NAME  = 'pressure_weighted_accumulated_northward_mass_flux', &
-           UNITS      = 'Pa m+2 s-1',                                &
-           DIMS       = MAPL_DimsHorzVert,                           &
-           VLOCATION  = MAPL_VLocationCenter,             RC=STATUS  )
-      _VERIFY(STATUS)
+!      call MAPL_AddExportSpec ( gc,                                  &
+!           SHORT_NAME = 'CX',                                      &
+!           LONG_NAME  = 'eastward_accumulated_courant_number',       &
+!           UNITS      = '',                                          &
+!           DIMS       = MAPL_DimsHorzVert,                           &
+!           VLOCATION  = MAPL_VLocationCenter,             RC=STATUS  )
+!      _VERIFY(STATUS)
+!
+!      call MAPL_AddExportSpec ( gc,                                  &
+!           SHORT_NAME = 'CY',                                      &
+!           LONG_NAME  = 'northward_accumulated_courant_number',      &
+!           UNITS      = '',                                          &
+!           DIMS       = MAPL_DimsHorzVert,                           &
+!           VLOCATION  = MAPL_VLocationCenter,             RC=STATUS  )
+!      _VERIFY(STATUS)
+!      call MAPL_AddExportSpec ( gc,                                  &
+!           SHORT_NAME = 'MFX',                                     &
+!           LONG_NAME  = 'pressure_weighted_accumulated_eastward_mass_flux', &
+!           UNITS      = 'Pa m+2 s-1',                                &
+!           DIMS       = MAPL_DimsHorzVert,                           &
+!           VLOCATION  = MAPL_VLocationCenter,             RC=STATUS  )
+!      _VERIFY(STATUS)
+!
+!      call MAPL_AddExportSpec ( gc,                                  &
+!           SHORT_NAME = 'MFY',                                     &
+!           LONG_NAME  = 'pressure_weighted_accumulated_northward_mass_flux', &
+!           UNITS      = 'Pa m+2 s-1',                                &
+!           DIMS       = MAPL_DimsHorzVert,                           &
+!           VLOCATION  = MAPL_VLocationCenter,             RC=STATUS  )
+!      _VERIFY(STATUS)
 !---------------------------------------------------------------------
 
       call MAPL_AddExportSpec ( gc,                                  &
@@ -320,6 +356,15 @@
            PRECISION  = ESMF_KIND_R8,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationEdge,             RC=STATUS  )
+      _VERIFY(STATUS)
+
+      call MAPL_AddExportSpec ( gc,                                  &
+           SHORT_NAME = 'SPHU0r8',                                   &
+           LONG_NAME  = 'specific_humidity_before_advection',        &
+           UNITS      = 'kg kg-1',                                   &
+           PRECISION  = ESMF_KIND_R8,                                &
+           DIMS       = MAPL_DimsHorzVert,                           &
+           VLOCATION  = MAPL_VLocationCenter,           RC=STATUS  )
       _VERIFY(STATUS)
 
       ! Internal State - MSL
@@ -514,6 +559,7 @@
       real(r8), pointer, dimension(:,:,:) :: DryPLE0r8 => null()
       real(r8), pointer, dimension(:,:,:) ::     MFXr8 => null()
       real(r8), pointer, dimension(:,:,:) ::     MFYr8 => null()
+      real(r8), pointer, dimension(:,:,:) ::   SPHU0r8 => null()
 
 !-MSL
       real, pointer, dimension(:,:,:) ::     MFX => null()
@@ -541,11 +587,21 @@
       integer               :: i, j
       real(r8)              :: PSDry0, PSDry1, PEdge_Bot, PEdge_Top
 
+      ! Uncomment this and relevant lines below to get PE number
+      !integer               :: i_pe
+      !type (ESMF_VM)        :: VM
+
       ! Get the target components name and set-up traceback handle.
       ! -----------------------------------------------------------
       call ESMF_GridCompGet ( GC, name=COMP_NAME, Grid=esmfGrid, RC=STATUS )
       _VERIFY(STATUS)
       Iam = trim(COMP_NAME) // TRIM(Iam)
+ 
+      ! Get my PE for debug (SDE 2020-01-28)
+      ! Need VM and i_pe to be defined, and need to have added
+      ! the argument VM=VM to the ESMF_GridCompGet call
+      !call ESMF_VMGet(VM, localPet=i_pe, rc=status)
+      !_VERIFY(STATUS)
 
       ! Get my internal MAPL_Generic state
       !-----------------------------------
@@ -567,10 +623,21 @@
       _VERIFY(STATUS)
       call MAPL_GetPointer ( IMPORT,     PS1,    'PS2', RC=STATUS )
       _VERIFY(STATUS)
-      call MAPL_GetPointer ( IMPORT,      UA,    'ULL', RC=STATUS )
-      _VERIFY(STATUS)
-      call MAPL_GetPointer ( IMPORT,      VA,    'VLL', RC=STATUS )
-      _VERIFY(STATUS)
+      If (use_fluxes) Then
+         call MAPL_GetPointer ( IMPORT,     MFX, 'MFX_IN', RC=STATUS )
+         _VERIFY(STATUS)
+         call MAPL_GetPointer ( IMPORT,     MFY, 'MFY_IN', RC=STATUS )
+         _VERIFY(STATUS)
+         call MAPL_GetPointer ( IMPORT,      CX,  'CX_IN', RC=STATUS )
+         _VERIFY(STATUS)
+         call MAPL_GetPointer ( IMPORT,      CY,  'CY_IN', RC=STATUS )
+         _VERIFY(STATUS)
+      Else
+         call MAPL_GetPointer ( IMPORT,      UA,    'ULL', RC=STATUS )
+         _VERIFY(STATUS)
+         call MAPL_GetPointer ( IMPORT,      VA,    'VLL', RC=STATUS )
+         _VERIFY(STATUS)
+      End If
       call MAPL_GetPointer ( IMPORT,   SPHU0,  'SPHU1', RC=STATUS )
       _VERIFY(STATUS)
       call MAPL_GetPointer ( IMPORT,   SPHU1,  'SPHU2', RC=STATUS )
@@ -582,31 +649,43 @@
       _VERIFY(STATUS)
       call MAPL_GetPointer ( EXPORT, PLE1r8, 'PLE1r8',  RC=STATUS )
       _VERIFY(STATUS)
-      call MAPL_GetPointer ( EXPORT, DryPLE0r8, 'DryPLE0r8',  RC=STATUS )
-      _VERIFY(STATUS)
-      call MAPL_GetPointer ( EXPORT, DryPLE1r8, 'DryPLE1r8',  RC=STATUS )
-      _VERIFY(STATUS)
 
       ! Reset the exports
       PLE0r8   (:,:,:) = 0.0d0
       PLE1r8   (:,:,:) = 0.0d0
+
+      call MAPL_GetPointer ( EXPORT, DryPLE0r8, 'DryPLE0r8',  RC=STATUS )
+      _VERIFY(STATUS)
+      call MAPL_GetPointer ( EXPORT, DryPLE1r8, 'DryPLE1r8',  RC=STATUS )
+      _VERIFY(STATUS)
       DryPLE0r8(:,:,:) = 0.0d0
       DryPLE1r8(:,:,:) = 0.0d0
 
       ! Get local dimensions
-      is = lbound(UA,1); ie = ubound(UA,1)
-      js = lbound(UA,2); je = ubound(UA,2)
-      lm = size  (UA,3)
+      is = lbound(SPHU0,1); ie = ubound(SPHU0,1)
+      js = lbound(SPHU0,2); je = ubound(SPHU0,2)
+      lm = size  (SPHU0,3)
+
+      ! FV3 will need this
+      call MAPL_GetPointer ( EXPORT, SPHU0r8,   'SPHU0r8',    RC=STATUS )
+      _VERIFY(STATUS)
+      if (flip_vertical) then
+         SPHU0r8 = 1.00d0*(SPHU0)
+      else
+         SPHU0r8 = 1.00d0*(SPHU0(:,:,LM:1:-1))
+      end if
 
       ! Restagger A-grid winds to C-grid and rotate for CS - L.Bindle
       ! -------------------------------------------------------------
-      ALLOCATE(UC(is:ie,js:je,lm), STAT=STATUS); 
-      _VERIFY(STATUS)
-      ALLOCATE(VC(is:ie,js:je,lm), STAT=STATUS); 
-      _VERIFY(STATUS)
-      UC(:,:,:) = UA(:,:,:)
-      VC(:,:,:) = VA(:,:,:)
-      call A2D2C(U=UC, V=VC, npz=lm, getC=.true.)
+      if (.not. use_fluxes) then
+         ALLOCATE(UC(is:ie,js:je,lm), STAT=STATUS); 
+         _VERIFY(STATUS)
+         ALLOCATE(VC(is:ie,js:je,lm), STAT=STATUS); 
+         _VERIFY(STATUS)
+         UC(:,:,:) = UA(:,:,:)
+         VC(:,:,:) = VA(:,:,:)
+         call A2D2C(U=UC, V=VC, npz=lm, getC=.true.)
+      end if
 
       ! Calcaulate PLE0/1 - M.Long
       ! ---------------------
@@ -642,6 +721,17 @@
       End Do
       End Do
 
+      ! If we ever throw out dry pressure entirely...
+      !! Calculate total pressure only
+      !Do J=js,je
+      !Do I=is,ie
+      !   ! Work up from the surface to get level edges
+      !   Do L=1,LM+1
+      !      PLE0r8   (I,J,L-1) = 100.d0*(AP(L)+(BP(L)*PS0(I,J)))
+      !      PLE1r8   (I,J,L-1) = 100.d0*(AP(L)+(BP(L)*PS1(I,J)))
+      !   End Do
+      !End Do
+      !End Do
 
       ! Arrays were calculated so that 1 = Surface
       ! FV3 wants 1 = TOA, LM+1 = Surface
@@ -650,8 +740,10 @@
       DryPLE1r8(:,:,:) = DryPLE1r8(:,:,LM:0:-1)
       PLE0r8   (:,:,:) = PLE0r8   (:,:,LM:0:-1)
       PLE1r8   (:,:,:) = PLE1r8   (:,:,LM:0:-1)
-      UC       (:,:,:) =  UC      (:,:,LM:1:-1)
-      VC       (:,:,:) =  VC      (:,:,LM:1:-1)
+      if (.not.(flip_vertical)) then
+         UC       (:,:,:) =  UC      (:,:,LM:1:-1)
+         VC       (:,:,:) =  VC      (:,:,LM:1:-1)
+      end if
 
       DEALLOCATE( AP, BP )
 
@@ -666,24 +758,48 @@
 
       ! Compute the courant numbers and mass fluxes
       !--------------------------------------------
-      ALLOCATE( UCr8(is:ie,js:je,lm),   STAT=STATUS); _VERIFY(STATUS)
-      ALLOCATE( VCr8(is:ie,js:je,lm),   STAT=STATUS); _VERIFY(STATUS)
-      ALLOCATE(PLEr8(is:ie,js:je,lm+1), STAT=STATUS); _VERIFY(STATUS)
+      If (use_fluxes) then
+         If (flip_vertical) then
+            MFXr8 = 1.00d0*(MFX(:,:,LM:1:-1))
+            MFYr8 = 1.00d0*(MFY(:,:,LM:1:-1))
+            CXr8  = 1.00d0*(CX( :,:,LM:1:-1))
+            CYr8  = 1.00d0*(CY( :,:,LM:1:-1))
+         else
+            MFXr8 = 1.00d0*(MFX)
+            MFYr8 = 1.00d0*(MFY)
+            CXr8  = 1.00d0*(CX)
+            CYr8  = 1.00d0*(CY)
+         end if
+      else
+         ALLOCATE( UCr8(is:ie,js:je,lm),   STAT=STATUS); _VERIFY(STATUS)
+         ALLOCATE( VCr8(is:ie,js:je,lm),   STAT=STATUS); _VERIFY(STATUS)
+         ALLOCATE(PLEr8(is:ie,js:je,lm+1), STAT=STATUS); _VERIFY(STATUS)
 
-      UCr8  = 1.00d0*(UC)
-      VCr8  = 1.00d0*(VC)
+         if (flip_vertical) then
+            UCr8  = 1.00d0*(UC(:,:,LM:1:-1))
+            VCr8  = 1.00d0*(VC(:,:,LM:1:-1))
+         else
+            UCr8  = 1.00d0*(UC)
+            VCr8  = 1.00d0*(VC)
+         end if
 
-      ! Use dry pressure at the start of the timestep to calculate mass
-      ! fluxes. GMAO method uses mid-step UC, VC and PLE?
-      PLEr8 = 1.00d0*(DryPLE0r8)
-      call fv_computeMassFluxes(UCr8, VCr8, PLEr8, &
-                                   MFXr8, MFYr8, CXr8, CYr8, dt)
+         ! Use dry pressure at the start of the timestep to calculate mass
+         ! fluxes. GMAO method uses mid-step UC, VC and PLE?
+         if (run_dry) then
+            PLEr8 = 1.00d0*(DryPLE0r8)
+         else
+            PLEr8 = 1.00d0*(PLE0r8)
+         end if
+         call fv_computeMassFluxes(UCr8, VCr8, PLEr8, &
+                                      MFXr8, MFYr8, CXr8, CYr8, dt)
 
-      !DEALLOCATE( UCr8, VCr8, PLEr8, PLE0, PLE1, DryPLE0, DryPLE1 )
-      DEALLOCATE( UCr8, VCr8, PLEr8, UC, VC)
+         !DEALLOCATE( UCr8, VCr8, PLEr8, PLE0, PLE1, DryPLE0, DryPLE1 )
+         DEALLOCATE( UCr8, VCr8, PLEr8, UC, VC)
+      end if
 
       call MAPL_TimerOff(ggState,"RUN")
       call MAPL_TimerOff(ggState,"TOTAL")
+
 
       ! All Done
       ! --------

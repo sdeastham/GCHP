@@ -166,6 +166,7 @@ contains
                                                  'MFYr8    ',    &
                                                  'PLE0r8   ',    &
                                                  'PLE1r8   ',    &
+                                                 'SPHU0r8  ',    &
                                                  'DryPLE0r8',    &
                                                  'DryPLE1r8' /), &
                                   DST_NAME  = (/ 'CX     ',      &
@@ -174,6 +175,7 @@ contains
                                                  'MFY    ',      &
                                                  'PLE0   ',      &
                                                  'PLE1   ',      &
+                                                 'QV0    ',      &
                                                  'DryPLE0',      &
                                                  'DryPLE1'   /), &
                                   DST_ID = ADV,                  &
@@ -276,6 +278,7 @@ contains
 
     ! Call Initialize for every Child
     !--------------------------------
+    write(*,*) ' INITIALIZING --> ', Trim(Comp_Name)
     call MAPL_GenericInitialize ( GC, IMPORT, EXPORT, CLOCK, __RC__ )
     _VERIFY(STATUS)
 
