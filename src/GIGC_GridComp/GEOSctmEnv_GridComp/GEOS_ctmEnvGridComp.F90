@@ -51,9 +51,9 @@
       INTEGER, PARAMETER :: dp = SELECTED_REAL_KIND(14,300)
       INTEGER, PARAMETER :: qp = SELECTED_REAL_KIND(18,400)
 
-      logical, parameter :: use_fluxes=.False.
-      logical, parameter :: flip_vertical=.False.
-      logical, parameter :: run_dry=.True.
+      logical            :: use_fluxes
+      logical            :: flip_vertical
+      logical            :: run_dry
 
       real(r8), parameter :: RADIUS = MAPL_RADIUS
       real(r8), parameter :: PI     = MAPL_PI_R8
@@ -205,33 +205,33 @@
       _VERIFY(STATUS)
 
       call MAPL_AddImportSpec ( gc,                                  &
-           SHORT_NAME = 'MFX_IN',                                    &
-           LONG_NAME  = 'pressure_weighted_accumulated_x_mass_flux', &
-           UNITS      = 'kg kg-1',                                   &
+           SHORT_NAME = 'MFX_DT',                                    &
+           LONG_NAME  = 'pressure_weighted_averaged_x_mass_flux',    &
+           UNITS      = 'Pa m+2 s-1'                                 &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationCenter,           RC=STATUS  )
       _VERIFY(STATUS)
 
       call MAPL_AddImportSpec ( gc,                                  &
-           SHORT_NAME = 'MFY_IN',                                    &
-           LONG_NAME  = 'pressure_weighted_accumulated_y_mass_flux', &
-           UNITS      = 'kg kg-1',                                   &
+           SHORT_NAME = 'MFY_DT',                                    &
+           LONG_NAME  = 'pressure_weighted_averaged_y_mass_flux',    &
+           UNITS      = 'Pa m+2 s-1'                                 &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationCenter,           RC=STATUS  )
       _VERIFY(STATUS)
 
       call MAPL_AddImportSpec ( gc,                                  &
-           SHORT_NAME = 'CX_IN',                                     &
-           LONG_NAME  = 'x_axis_accumulated_courant_number',         &
-           UNITS      = '',                                          &
+           SHORT_NAME = 'CX_DT',                                     &
+           LONG_NAME  = 'x_axis_averaged_courant_number',            &
+           UNITS      = 's-1',                                       &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationCenter,           RC=STATUS  )
       _VERIFY(STATUS)
 
       call MAPL_AddImportSpec ( gc,                                  &
-           SHORT_NAME = 'CY_IN',                                     &
-           LONG_NAME  = 'y_axis_accumulated_courant_number',         &
-           UNITS      = '',                                          &
+           SHORT_NAME = 'CY_DT',                                     &
+           LONG_NAME  = 'y_axis_averaged_courant_number',            &
+           UNITS      = 's-1',                                       &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationCenter,           RC=STATUS  )
       _VERIFY(STATUS)
@@ -455,6 +455,7 @@
       type (ESMF_Config)            :: CF
       integer                       :: dims(3)
       integer :: comm
+      integer :: use_fluxes_int, run_dry_int, flip_vertical_int
 
       !  Get my name and set-up traceback handle
       !  ---------------------------------------
@@ -474,6 +475,31 @@
 
       call MAPL_TimerOn(ggSTATE,"TOTAL")
       call MAPL_TimerOn(ggSTATE,"INITIALIZE")
+
+      ! Get run options
+      ! Require mass fluxes instead of winds?
+      call ESMF_ConfigGetAttribute(CF,value=use_fluxes_int,&
+         label='USE_FLUXES:',rc=status)
+      VERIFY_(STATUS)
+      use_fluxes=(use_fluxes_int>0)
+
+      ! Flip key met fields?
+      call ESMF_ConfigGetAttribute(CF,value=flip_vertical_int,&
+         label='FLIP_VERTICAL:',rc=status)
+      VERIFY_(STATUS)
+      flip_vertical=(flip_vertical_int>0)
+
+      ! Transport dry VMR?
+      call ESMF_ConfigGetAttribute(CF,value=run_dry_int,&
+         label='RUN_DRY:',rc=status)
+      VERIFY_(STATUS)
+      run_dry=(run_dry_int>0)
+
+      if (mapl_am_i_root()) then
+         write(*,'(a,x,L1)') ' -- USE FLUXES   --> ', USE_FLUXES
+         write(*,'(a,x,L1)') ' -- FLIP INPUTS  --> ', FLIP_VERTICAL
+         write(*,'(a,x,L1)') ' -- RUN DRY      --> ', RUN_DRY
+      end if
 
       ! Get the grid related information
       !---------------------------------
@@ -562,10 +588,10 @@
       real(r8), pointer, dimension(:,:,:) ::   SPHU0r8 => null()
 
 !-MSL
-      real, pointer, dimension(:,:,:) ::     MFX => null()
-      real, pointer, dimension(:,:,:) ::     MFY => null()
-      real, pointer, dimension(:,:,:) ::     CX => null()
-      real, pointer, dimension(:,:,:) ::     CY => null()
+      real, pointer, dimension(:,:,:) ::     MFX_DT => null()
+      real, pointer, dimension(:,:,:) ::     MFY_DT => null()
+      real, pointer, dimension(:,:,:) ::     CX_DT  => null()
+      real, pointer, dimension(:,:,:) ::     CY_DT  => null()
 !--
       real,     pointer, dimension(:,:,:) ::      UC => null()
       real,     pointer, dimension(:,:,:) ::      VC => null()
@@ -624,13 +650,13 @@
       call MAPL_GetPointer ( IMPORT,     PS1,    'PS2', RC=STATUS )
       _VERIFY(STATUS)
       If (use_fluxes) Then
-         call MAPL_GetPointer ( IMPORT,     MFX, 'MFX_IN', RC=STATUS )
+         call MAPL_GetPointer ( IMPORT,     MFX, 'MFX_DT', RC=STATUS )
          _VERIFY(STATUS)
-         call MAPL_GetPointer ( IMPORT,     MFY, 'MFY_IN', RC=STATUS )
+         call MAPL_GetPointer ( IMPORT,     MFY, 'MFY_DT', RC=STATUS )
          _VERIFY(STATUS)
-         call MAPL_GetPointer ( IMPORT,      CX,  'CX_IN', RC=STATUS )
+         call MAPL_GetPointer ( IMPORT,      CX,  'CX_DT', RC=STATUS )
          _VERIFY(STATUS)
-         call MAPL_GetPointer ( IMPORT,      CY,  'CY_IN', RC=STATUS )
+         call MAPL_GetPointer ( IMPORT,      CY,  'CY_DT', RC=STATUS )
          _VERIFY(STATUS)
       Else
          call MAPL_GetPointer ( IMPORT,      UA,    'ULL', RC=STATUS )
@@ -702,13 +728,23 @@
             ! Pre-advection
             PEdge_Bot = AP(L  ) + BP(L  ) * PS0(I,J)
             PEdge_Top = AP(L+1) + BP(L+1) * PS0(I,J)
-            PSDry0    = PSDry0 + (PEdge_Bot - PEdge_Top) & 
-                               * (1.d0 - SPHU0(I,J,L))
+            if (flip_vertical) then
+               PSDry0    = PSDry0 + (PEdge_Bot - PEdge_Top) & 
+                                  * (1.d0 - SPHU0(I,J,LM+1-L))
+            else
+               PSDry0    = PSDry0 + (PEdge_Bot - PEdge_Top) & 
+                                  * (1.d0 - SPHU0(I,J,L))
+            end if
             ! Post-advection
             PEdge_Bot = AP(L  ) + BP(L  ) * PS1(I,J)
             PEdge_Top = AP(L+1) + BP(L+1) * PS1(I,J)
-            PSDry1    = PSDry1 + (PEdge_Bot - PEdge_Top) & 
-                               * (1.d0 - SPHU1(I,J,L))
+            if (flip_vertical) then
+               PSDry1    = PSDry1 + (PEdge_Bot - PEdge_Top) & 
+                                  * (1.d0 - SPHU1(I,J,LM+1-L))
+            else
+               PSDry1    = PSDry1 + (PEdge_Bot - PEdge_Top) & 
+                                  * (1.d0 - SPHU1(I,J,L))
+            endif
          End Do
          ! Work back up from the surface to get dry level edges
          ! Do wet pressure at the same time - why not
@@ -740,7 +776,7 @@
       DryPLE1r8(:,:,:) = DryPLE1r8(:,:,LM:0:-1)
       PLE0r8   (:,:,:) = PLE0r8   (:,:,LM:0:-1)
       PLE1r8   (:,:,:) = PLE1r8   (:,:,LM:0:-1)
-      if (.not.(flip_vertical)) then
+      if ((.not.use_fluxes).and.(.not.(flip_vertical))) then
          UC       (:,:,:) =  UC      (:,:,LM:1:-1)
          VC       (:,:,:) =  VC      (:,:,LM:1:-1)
       end if
@@ -759,29 +795,26 @@
       ! Compute the courant numbers and mass fluxes
       !--------------------------------------------
       If (use_fluxes) then
+         ! Handle flipping, and multiply by time step
          If (flip_vertical) then
-            MFXr8 = 1.00d0*(MFX(:,:,LM:1:-1))
-            MFYr8 = 1.00d0*(MFY(:,:,LM:1:-1))
-            CXr8  = 1.00d0*(CX( :,:,LM:1:-1))
-            CYr8  = 1.00d0*(CY( :,:,LM:1:-1))
+            MFXr8 = dt*(MFX_DT)
+            MFYr8 = dt*(MFY_DT)
+            CXr8  = dt*(CX_DT)
+            CYr8  = dt*(CY_DT)
          else
-            MFXr8 = 1.00d0*(MFX)
-            MFYr8 = 1.00d0*(MFY)
-            CXr8  = 1.00d0*(CX)
-            CYr8  = 1.00d0*(CY)
+            MFXr8 = dt*(MFX_DT(:,:,LM:1:-1))
+            MFYr8 = dt*(MFY_DT(:,:,LM:1:-1))
+            CXr8  = dt*(CX_DT( :,:,LM:1:-1))
+            CYr8  = dt*(CY_DT( :,:,LM:1:-1))
          end if
       else
          ALLOCATE( UCr8(is:ie,js:je,lm),   STAT=STATUS); _VERIFY(STATUS)
          ALLOCATE( VCr8(is:ie,js:je,lm),   STAT=STATUS); _VERIFY(STATUS)
          ALLOCATE(PLEr8(is:ie,js:je,lm+1), STAT=STATUS); _VERIFY(STATUS)
 
-         if (flip_vertical) then
-            UCr8  = 1.00d0*(UC(:,:,LM:1:-1))
-            VCr8  = 1.00d0*(VC(:,:,LM:1:-1))
-         else
-            UCr8  = 1.00d0*(UC)
-            VCr8  = 1.00d0*(VC)
-         end if
+         ! Any and all necessary flipping happened already
+         UCr8  = 1.00d0*(UC)
+         VCr8  = 1.00d0*(VC)
 
          ! Use dry pressure at the start of the timestep to calculate mass
          ! fluxes. GMAO method uses mid-step UC, VC and PLE?
