@@ -51,6 +51,10 @@
       INTEGER, PARAMETER :: dp = SELECTED_REAL_KIND(14,300)
       INTEGER, PARAMETER :: qp = SELECTED_REAL_KIND(18,400)
 
+      logical            :: run_dry
+      logical            :: use_fluxes
+      logical            :: flip_vertical
+
       real(r8), parameter :: RADIUS = MAPL_RADIUS
       real(r8), parameter :: PI     = MAPL_PI_R8
       real(r8), parameter :: D0_0   = 0.0_r8
@@ -410,6 +414,7 @@
       type (ESMF_Config)            :: CF
       integer                       :: dims(3)
       integer :: comm
+      integer :: opt_int
 
       !  Get my name and set-up traceback handle
       !  ---------------------------------------
@@ -429,6 +434,32 @@
 
       call MAPL_TimerOn(ggSTATE,"TOTAL")
       call MAPL_TimerOn(ggSTATE,"INITIALIZE")
+
+      ! Read run options
+      ! Transport dry VMR rather than total?
+      call ESMF_ConfigGetAttribute(CF,value=opt_int,&
+          label='RUN_DRY:',rc=status)
+      VERIFY_(STATUS)
+      run_dry=(opt_int>0)
+     
+      ! Use fluxes and courant numbers directly?
+      !call ESMF_ConfigGetAttribute(CF,value=opt_int,&
+      !    label='USE_MFLUX:',rc=status)
+      !VERIFY_(STATUS)
+      !use_fluxes=(opt_int>0)
+      use_fluxes=.False.
+
+      ! Flip met fields vertically?
+      call ESMF_ConfigGetAttribute(CF,value=opt_int,&
+          label='FLIP_MET:',rc=status)
+      VERIFY_(STATUS)
+      flip_vertical=(opt_int>0)
+
+      if (mapl_am_I_root()) then
+          write(*,'(a,x,L1)') ' -- RUN DRY      --> ', run_dry
+          write(*,'(a,x,L1)') ' -- USE FLUXES   --> ', use_fluxes
+          write(*,'(a,x,L1)') ' -- FLIP MET     --> ', flip_vertical
+      end if
 
       ! Get the grid related information
       !---------------------------------
@@ -594,9 +625,9 @@
       DryPLE1r8(:,:,:) = 0.0d0
 
       ! Get local dimensions
-      is = lbound(UA,1); ie = ubound(UA,1)
-      js = lbound(UA,2); je = ubound(UA,2)
-      lm = size  (UA,3)
+      is = lbound(SPHU0,1); ie = ubound(SPHU0,1)
+      js = lbound(SPHU0,2); je = ubound(SPHU0,2)
+      lm = size  (SPHU0,3)
 
       ! Restagger A-grid winds to C-grid and rotate for CS - L.Bindle
       ! -------------------------------------------------------------
@@ -623,13 +654,23 @@
             ! Pre-advection
             PEdge_Bot = AP(L  ) + BP(L  ) * PS0(I,J)
             PEdge_Top = AP(L+1) + BP(L+1) * PS0(I,J)
-            PSDry0    = PSDry0 + (PEdge_Bot - PEdge_Top) & 
-                               * (1.d0 - SPHU0(I,J,L))
+            If (flip_vertical) then
+               PSDry0    = PSDry0 + (PEdge_Bot - PEdge_Top) & 
+                                  * (1.d0 - SPHU0(I,J,LM+1-L))
+            else
+               PSDry0    = PSDry0 + (PEdge_Bot - PEdge_Top) & 
+                                  * (1.d0 - SPHU0(I,J,L))
+            end if
             ! Post-advection
             PEdge_Bot = AP(L  ) + BP(L  ) * PS1(I,J)
             PEdge_Top = AP(L+1) + BP(L+1) * PS1(I,J)
-            PSDry1    = PSDry1 + (PEdge_Bot - PEdge_Top) & 
-                               * (1.d0 - SPHU1(I,J,L))
+            If (flip_vertical) then
+               PSDry1    = PSDry1 + (PEdge_Bot - PEdge_Top) & 
+                                  * (1.d0 - SPHU1(I,J,LM+1-L))
+            else
+               PSDry1    = PSDry1 + (PEdge_Bot - PEdge_Top) & 
+                                  * (1.d0 - SPHU1(I,J,L))
+            end if
          End Do
          ! Work back up from the surface to get dry level edges
          ! Do wet pressure at the same time - why not
@@ -650,8 +691,11 @@
       DryPLE1r8(:,:,:) = DryPLE1r8(:,:,LM:0:-1)
       PLE0r8   (:,:,:) = PLE0r8   (:,:,LM:0:-1)
       PLE1r8   (:,:,:) = PLE1r8   (:,:,LM:0:-1)
-      UC       (:,:,:) =  UC      (:,:,LM:1:-1)
-      VC       (:,:,:) =  VC      (:,:,LM:1:-1)
+      ! If met already flipped, don't need to do so here
+      if (.not.flip_vertical) then
+         UC       (:,:,:) =  UC      (:,:,LM:1:-1)
+         VC       (:,:,:) =  VC      (:,:,LM:1:-1)
+      end if
 
       DEALLOCATE( AP, BP )
 
@@ -675,7 +719,11 @@
 
       ! Use dry pressure at the start of the timestep to calculate mass
       ! fluxes. GMAO method uses mid-step UC, VC and PLE?
-      PLEr8 = 1.00d0*(DryPLE0r8)
+      if (run_dry) then
+         PLEr8 = 1.00d0*(DryPLE0r8)
+      else
+         PLEr8 = 1.00d0*(PLE0r8)
+      end if
       call fv_computeMassFluxes(UCr8, VCr8, PLEr8, &
                                    MFXr8, MFYr8, CXr8, CYr8, dt)
 
