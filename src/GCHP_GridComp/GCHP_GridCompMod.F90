@@ -167,7 +167,8 @@ contains
                                                  'PLE0r8   ',    &
                                                  'PLE1r8   ',    &
                                                  'DryPLE0r8',    &
-                                                 'DryPLE1r8' /), &
+                                                 'DryPLE1r8',    &
+                                                 'SPHU0r8'   /), &
                                   DST_NAME  = (/ 'CX     ',      &
                                                  'CY     ',      &
                                                  'MFX    ',      &
@@ -175,7 +176,8 @@ contains
                                                  'PLE0   ',      &
                                                  'PLE1   ',      &
                                                  'DryPLE0',      &
-                                                 'DryPLE1'   /), &
+                                                 'DryPLE1',      &
+                                                 'SPHU0'     /), &
                                   DST_ID = ADV,                  &
                                   SRC_ID = ECTM,                 &
                                   __RC__  )

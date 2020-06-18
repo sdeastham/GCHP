@@ -291,6 +291,15 @@
 !---------------------------------------------------------------------
 
       call MAPL_AddExportSpec ( gc,                                  &
+           SHORT_NAME = 'SPHU0r8',                                   &
+           LONG_NAME  = 'specific_humidity_before_advection',        &
+           UNITS      = 'kg kg-1',                                   &
+           PRECISION  = ESMF_KIND_R8,                                &
+           DIMS       = MAPL_DimsHorzVert,                           &
+           VLOCATION  = MAPL_VLocationCenter,           RC=STATUS  )
+      _VERIFY(STATUS)
+
+      call MAPL_AddExportSpec ( gc,                                  &
            SHORT_NAME = 'DryPLE1r8',                                 &
            LONG_NAME  = 'dry_pressure_at_layer_edges_after_advection',&
            UNITS      = 'Pa',                                        &
@@ -545,6 +554,7 @@
       real(r8), pointer, dimension(:,:,:) :: DryPLE0r8 => null()
       real(r8), pointer, dimension(:,:,:) ::     MFXr8 => null()
       real(r8), pointer, dimension(:,:,:) ::     MFYr8 => null()
+      real(r8), pointer, dimension(:,:,:) ::   SPHU0r8 => null()
 
 !-MSL
       real, pointer, dimension(:,:,:) ::     MFX => null()
@@ -617,12 +627,15 @@
       _VERIFY(STATUS)
       call MAPL_GetPointer ( EXPORT, DryPLE1r8, 'DryPLE1r8',  RC=STATUS )
       _VERIFY(STATUS)
+      call MAPL_GetPointer ( EXPORT,   SPHU0r8,   'SPHU0r8',  RC=STATUS )
+      _VERIFY(STATUS)
 
       ! Reset the exports
       PLE0r8   (:,:,:) = 0.0d0
       PLE1r8   (:,:,:) = 0.0d0
       DryPLE0r8(:,:,:) = 0.0d0
       DryPLE1r8(:,:,:) = 0.0d0
+      SPHU0r8  (:,:,:) = 0.0d0
 
       ! Get local dimensions
       is = lbound(SPHU0,1); ie = ubound(SPHU0,1)
@@ -691,10 +704,14 @@
       DryPLE1r8(:,:,:) = DryPLE1r8(:,:,LM:0:-1)
       PLE0r8   (:,:,:) = PLE0r8   (:,:,LM:0:-1)
       PLE1r8   (:,:,:) = PLE1r8   (:,:,LM:0:-1)
-      ! If met already flipped, don't need to do so here
-      if (.not.flip_vertical) then
-         UC       (:,:,:) =  UC      (:,:,LM:1:-1)
-         VC       (:,:,:) =  VC      (:,:,LM:1:-1)
+      ! Convert SPHU0 from r4 to r8, and (if necessary)
+      ! flip SPHU0 and winds for use by FV3
+      if (flip_vertical) then
+         SPHU0r8 = 1.0d0*SPHU0
+      else
+         SPHU0r8  (:,:,:) =  1.0d0*SPHU0(:,:,LM:1:-1)
+         UC       (:,:,:) =        UC   (:,:,LM:1:-1)
+         VC       (:,:,:) =        VC   (:,:,LM:1:-1)
       end if
 
       DEALLOCATE( AP, BP )
