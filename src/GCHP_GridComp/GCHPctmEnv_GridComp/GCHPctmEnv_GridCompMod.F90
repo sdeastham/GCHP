@@ -52,6 +52,7 @@
       INTEGER, PARAMETER :: qp = SELECTED_REAL_KIND(18,400)
 
       logical            :: run_dry
+      logical            :: run_free
       logical            :: use_fluxes
       logical            :: flip_vertical
 
@@ -483,6 +484,12 @@
       VERIFY_(STATUS)
       run_dry=(opt_int>0)
      
+      ! Allow surface pressure to be free-running?
+      call ESMF_ConfigGetAttribute(CF,value=opt_int,&
+          label='RUN_FREE:',rc=status)
+      VERIFY_(STATUS)
+      run_free=(opt_int>0)
+     
       ! Use fluxes and courant numbers directly?
       call ESMF_ConfigGetAttribute(CF,value=opt_int,&
           label='USE_MFLUX:',rc=status)
@@ -496,6 +503,7 @@
       flip_vertical=(opt_int>0)
 
       if (mapl_am_I_root()) then
+          write(*,'(a,x,L1)') ' -- RUN FREE     --> ', run_free
           write(*,'(a,x,L1)') ' -- RUN DRY      --> ', run_dry
           write(*,'(a,x,L1)') ' -- USE FLUXES   --> ', use_fluxes
           write(*,'(a,x,L1)') ' -- FLIP MET     --> ', flip_vertical
