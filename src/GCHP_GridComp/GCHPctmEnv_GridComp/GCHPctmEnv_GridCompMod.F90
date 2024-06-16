@@ -674,12 +674,12 @@ module GCHPctmEnv_GridComp
       ! expects top-down pressure in [Pa].
 
       ! Compute PLE0 from PS1 (naming mismatch between FV3 GEOS-Chem)
-      call calculate_ple(PS1_IMPORT, PLE0_EXPORT)
+      call calculate_ple(LM,PS1_IMPORT, PLE0_EXPORT)
       PLE0_EXPORT = 100.0d0 * PLE0_EXPORT
       PLE0_EXPORT = PLE0_EXPORT(:,:,LM:0:-1)
 
       ! Compute PLE1 from PS2 (naming mismatch between FV3 GEOS-Chem )
-      call calculate_ple(PS2_IMPORT, PLE1_EXPORT)
+      call calculate_ple(LM,PS2_IMPORT, PLE1_EXPORT)
       PLE1_EXPORT = 100.0d0 * PLE1_EXPORT
       PLE1_EXPORT = PLE1_EXPORT(:,:,LM:0:-1)
 
@@ -687,7 +687,7 @@ module GCHPctmEnv_GridComp
       if ( use_total_air_pressure_in_advection < 1 ) then
 
          call calculate_ple(          &
-              LM=LM,
+              LM=LM,                  &
               PS=PS1_IMPORT,          &
               PLE=DryPLE0_EXPORT,     &
               SPHU=SPHU1_IMPORT,      &
@@ -697,7 +697,7 @@ module GCHPctmEnv_GridComp
          DryPLE0_EXPORT = DryPLE0_EXPORT(:,:,LM:0:-1)
 
          call calculate_ple(          &
-              LM=LM,
+              LM=LM,                  &
               PS=PS2_IMPORT,          &
               PLE=DryPLE1_EXPORT,     &
               SPHU=SPHU2_IMPORT,      &
@@ -1024,15 +1024,14 @@ module GCHPctmEnv_GridComp
       num_edges = num_levels + 1
 
       ALLOCATE(AP(num_edges), STAT=STATUS);
-      _VERIFY(STATUS)
       ALLOCATE(BP(num_edges), STAT=STATUS);
-      _VERIFY(STATUS)
 
       ! Get AP and BP direct from a common source
       call set_eta(lm,ls,ptop,pint,ap,bp)
 
       ! Flip them - set_eta provides positive=down
-      AP = AP(num_edges:1:-1)
+      ! Also convert Pa to hPa
+      AP = AP(num_edges:1:-1) * 0.01
       BP = BP(num_edges:1:-1)
       
       !AP = 1d0
